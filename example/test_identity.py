@@ -7,9 +7,11 @@ class TestIdentity(TestCase):
         self.assertEquals(identity.identity(2), 2)
         self.assertEquals(identity.identity(3), 3)
 
+    @visibility("hidden")
     def test_doubler(self):
         self.assertIOEquals(identity.doubler, ['1'], '2')
 
+    @weight(2)
     def test_greeter(self):
         self.assertIOEquals(identity.greeter, ['John', 'Doe'], 'Hello John Doe')
 
