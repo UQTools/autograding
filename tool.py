@@ -1,16 +1,33 @@
+"""
+This file may be used as a starting point for writing Gradescope autograders.
+
+The first part of the file contains a TestCase superclass that introduces
+some convenience methods for writing tests with input and output.
+
+The second part of the file contains a copy of the Gradescope provided
+unittest wrapper to output results in the Gradescope JSON format.
+
+The third part handles the generation of an appropriate zip file
+based on the contents of the current directory.
+"""
+
 import io
 import unittest.mock
 from unittest import TestCase
 
+
 class TeachingStaffException(Exception):
+    """Exception that is raised if the tests have been written incorrectly."""
     pass
 
 
 def _ignore_whitespace(s):
     return s.replace(r'\s', '')
 
+
 def _ignore_case(s):
     return s.lower()
+
 
 class TestCase(TestCase):
     def assertIOEquals(self, func, stdin, stdout, 
@@ -60,9 +77,12 @@ class TestCase(TestCase):
                                        output_includes_input)
     
 
-## Taken from
-## https://github.com/gradescope/gradescope-utils/blob/master/gradescope_utils/autograder_utils/json_test_runner.py
+"""
+The following code is a copy of the Gradescope provided unittest wrapper
+to output results in the Gradescope JSON format.
 
+https://github.com/gradescope/gradescope-utils/blob/master/gradescope_utils/autograder_utils/json_test_runner.py
+"""
 import sys
 import time
 import json
@@ -278,8 +298,115 @@ class JSONTestRunner(object):
         return result
 
 
-## Runs on import ick
+"""
+Handle the generation of a Gradescope autograder zip file.
+"""
+import os
+import datetime
+from zipfile import ZipFile
 
-suite = unittest.defaultTestLoader.discover('.')
-JSONTestRunner(visibility='visible', stream=sys.stdout).run(suite)
+RUN_AUTOGRADER_TEMPALTE = """#!/bin/bash
+
+cd /autograder/source
+cp -r /autograder/submission/{} .
+python3 {} > /autograder/results/results.json
+"""
+
+SETUP_TEMPLATE = """#!/bin/bash
+
+apt install python3
+"""
+
+
+def generate_autograder_zip(submission_file, test_file):
+    print("Generating autograder.zip")
+    # Create the zip file
+    with ZipFile('autograder.zip', 'w') as zf:
+        # Write required scripts
+        zf.writestr('run_autograder', RUN_AUTOGRADER_TEMPALTE.format(submission_file, test_file))
+        zf.writestr('setup.sh', SETUP_TEMPLATE)
+        # Write the test file
+        zf.write(test_file)
+        # Write the current file, tool.py
+        zf.write('tool.py')
+
+        # Find any non-submission files and write them
+        for filename in os.listdir('.'):
+            if filename.startswith("autograder-"):
+                continue
+            if filename not in ['autograder.zip', submission_file, test_file, 'tool.py']:
+                print(f"\tFound extra file {filename} in directory, should this be included? (y/n)", end=' ')
+                if input().lower() == 'y':
+                    zf.write(filename)
+                    print(f"\tAdded {filename} to autograder.zip")
+                else:
+                    print(f"\tNot including {filename}")
+
+
+"""
+Handles user interaction or lack thereof.
+"""
+
+def main():
+    # save a copy of the autograder just in case
+    if os.path.exists('autograder.zip'):
+        dateandtime = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        os.rename('autograder.zip', f'autograder-{dateandtime}.zip')
+
+    submission_file = None
+    test_file = None
+
+    for filename in os.listdir('.'):
+        if filename == 'tool.py':
+            continue
+        if not filename.endswith('.py'):
+            continue
+
+        if filename.startswith('test') and not test_file:
+            test_file = filename
+            continue
+        elif filename.startswith('test') and test_file:
+            print("Found multiple possible test files: {} and {}".format(test_file, filename))
+            print("Please remove one of them and try again")
+            return
+
+        if not filename.startswith('test') and not submission_file:
+            submission_file = filename
+            continue
+        elif not filename.startswith('test') and submission_file:
+            print("Found multiple possible submission files: {} and {}".format(submission_file, filename))
+            print("Please remove one of them and try again")
+            return 
+
+    if not submission_file:
+        print("No submission file found, please add a file to the directory and try again")
+        return
+    if not test_file:
+        print("No test file found, please add a file to the directory and try again")
+        return
+
+    print("Executing tests")
+    # load tests from the test file
+    gobbled = io.StringIO()
+    with unittest.mock.patch('sys.stdout', new=gobbled):
+        suite = unittest.TestLoader().loadTestsFromName(test_file[:-3])
+        runner = JSONTestRunner(visibility='visible', stream=sys.stdout)
+        runner.run(suite)
+
+    for test in runner.json_data["tests"]:
+        print(f"\t{test['name']}", test["status"])
+        if test["status"] != "passed":
+            print("\tError: test {} did not pass".format(test["name"]))
+            print("\tPlease fix the test or solution and try again")
+            return
+
+    generate_autograder_zip(submission_file, test_file)
+
+
+if __name__ == '__main__':
+    main()
+elif __name__ == 'tool':
+    # If we're being imported, run the tests
+    suite = unittest.defaultTestLoader.discover('.')
+    JSONTestRunner(visibility='visible', stream=sys.stdout).run(suite)
 

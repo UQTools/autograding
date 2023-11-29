@@ -8,7 +8,7 @@ class TestIdentity(TestCase):
         self.assertEquals(identity.identity(3), 3)
 
     def test_doubler(self):
-        self.assertIOEquals(identity.doubler, ['1'], '11')
+        self.assertIOEquals(identity.doubler, ['1'], '2')
 
     def test_greeter(self):
         self.assertIOEquals(identity.greeter, ['John', 'Doe'], 'Hello John Doe')
