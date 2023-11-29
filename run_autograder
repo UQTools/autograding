@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cp /autograder/source/identity.py .
+cd /autograder/source
+python3 test_identity.py > /autograder/results/results.json
+

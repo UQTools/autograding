@@ -1,0 +1,3 @@
+Welcome to the Museum
+Say thank you? (y/n)
+n

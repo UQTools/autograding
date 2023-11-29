@@ -1,0 +1,7 @@
+Welcome to the Museum
+Say thank you? (y/n)
+y
+You're welcome!
+What's your name?
+John
+Hello John!
