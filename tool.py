@@ -33,6 +33,7 @@ class TestCase(TestCase):
     def assertIOEquals(self, func, stdin, stdout, 
                        ignore_whitespace=True, ignore_case=True,
                        output_includes_input=False):
+        self.longMessage = True
         for line in stdin:
             if not isinstance(line, str):
                 raise TeachingStaffException("Input must be a list of strings")
@@ -49,13 +50,14 @@ class TestCase(TestCase):
             stdout = _ignore_case(stdout)
 
         gobbled = io.StringIO()
-        def send_input():
-            for line in stdin:
-                if output_includes_input:
-                    gobbled.write(line + '\n')
-                yield line
-
-        with unittest.mock.patch('builtins.input', side_effect=send_input()):
+        def send_input(prompt=""):
+            gobbled.write(prompt)
+            line = stdin.pop(0)
+            if output_includes_input:
+                gobbled.write(line + '\n')
+            return line
+        
+        with unittest.mock.patch('builtins.input', side_effect=send_input):
             with unittest.mock.patch('sys.stdout', new=gobbled) as fake_out:
                 func()
                 output = fake_out.getvalue().strip()
@@ -64,7 +66,8 @@ class TestCase(TestCase):
                 if ignore_case:
                     output = _ignore_case(output)
 
-                self.assertEquals(stdout, output)
+                self.assertEquals(stdout, output,
+                                  "Expected: {}\nGot: {}".format(stdout, output))
 
 
     def assertIOFromFileEquals(self, func, stdin, stdout_file,

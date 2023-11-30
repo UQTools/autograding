@@ -13,7 +13,7 @@ class TestIdentity(TestCase):
 
     @weight(2)
     def test_greeter(self):
-        self.assertIOEquals(identity.greeter, ['John', 'Doe'], 'Hello John Doe')
+        self.assertIOEquals(identity.greeter, ['John', 'Doe'], 'First name: Last name: Hello John Doe')
 
     def test_museum01(self):
         self.assertIOFromFileEquals(identity.museum, ['y', 'John'], 'testMuseum01.txt')

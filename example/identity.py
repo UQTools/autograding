@@ -6,8 +6,8 @@ def doubler():
     print(x * 2)
 
 def greeter():
-    first_name = input()
-    last_name = input()
+    first_name = input("First name: ")
+    last_name = input("Last name: ")
 
     print(f'Hello {first_name} {last_name}')
 
